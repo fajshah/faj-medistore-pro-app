@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { MessageSquare, X, Send, Bot, User, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { GoogleGenAI } from "@google/genai";
 import ReactMarkdown from 'react-markdown';
 
 export default function ChatBot() {
@@ -28,22 +27,22 @@ export default function ChatBot() {
     setIsLoading(true);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: [
-          { role: 'user', parts: [{ text: userMessage }] }
-        ],
-        config: {
-          systemInstruction: "You are an expert pharmaceutical assistant for 'MediStore Pro'. You provide information about medicines, health tips, and wellness. You are professional, empathetic, and always advise users to consult a doctor for serious medical conditions. Keep responses concise and use clean formatting with markdown.",
-        }
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userMessage })
       });
 
-      const botMessage = response.text || "I'm sorry, I couldn't process that. Please try again.";
-      setMessages(prev => [...prev, { role: 'bot', content: botMessage }]);
+      if (response.ok) {
+        const data = await response.json();
+        const botMessage = data.reply || "I'm sorry, I couldn't process that. Please try again.";
+        setMessages(prev => [...prev, { role: 'bot', content: botMessage }]);
+      } else {
+        throw new Error('API request failed');
+      }
     } catch (error) {
-      console.error("Gemini Error:", error);
-      setMessages(prev => [...prev, { role: 'bot', content: "I encountered an error. Please check your connection or try again later." }]);
+      console.error("Chat Error:", error);
+      setMessages(prev => [...prev, { role: 'bot', content: "I encountered an issue connecting to the AI assistant. Please check back shortly or consult our pharmacist directly." }]);
     } finally {
       setIsLoading(false);
     }
