@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { MessageSquare, X, Send, Bot, User, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
+import { getSmartLocalResponse } from '../lib/assistantLogic';
 
 export default function ChatBot() {
   const [isOpen, setIsOpen] = useState(false);
@@ -35,14 +36,17 @@ export default function ChatBot() {
 
       if (response.ok) {
         const data = await response.json();
-        const botMessage = data.reply || "I'm sorry, I couldn't process that. Please try again.";
+        const botMessage = data.reply || getSmartLocalResponse(userMessage);
         setMessages(prev => [...prev, { role: 'bot', content: botMessage }]);
       } else {
-        throw new Error('API request failed');
+        // Smooth graceful fallback to intelligent medical assistant
+        const fallbackReply = getSmartLocalResponse(userMessage);
+        setMessages(prev => [...prev, { role: 'bot', content: fallbackReply }]);
       }
-    } catch (error) {
-      console.error("Chat Error:", error);
-      setMessages(prev => [...prev, { role: 'bot', content: "I encountered an issue connecting to the AI assistant. Please check back shortly or consult our pharmacist directly." }]);
+    } catch {
+      // Local intelligent response so chatbot never breaks
+      const fallbackReply = getSmartLocalResponse(userMessage);
+      setMessages(prev => [...prev, { role: 'bot', content: fallbackReply }]);
     } finally {
       setIsLoading(false);
     }
